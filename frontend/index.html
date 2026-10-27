@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirPulse AI — Enterprise Air Quality Intelligence Platform</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet Routing Machine CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+  <!-- Custom Luxury Design System -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Top Executive Navigation Bar -->
+  <header class="navbar">
+    <div class="brand-section">
+      <div class="brand-logo" aria-hidden="true">🌍</div>
+      <div>
+        <h1 class="brand-title">AirPulse AI</h1>
+        <p class="brand-subtitle">Pan-India Environmental Intelligence & Decision Platform</p>
+      </div>
+      <div class="sdg-badges-group" aria-label="Sustainable Development Goals">
+        <span class="sdg-tag sdg-3" title="UN SDG 3: Good Health and Well-being">SDG 3 Health</span>
+        <span class="sdg-tag sdg-13" title="UN SDG 13: Climate Action">SDG 13 Climate</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="status-badge" role="status" aria-live="polite">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span id="modelStatusText">OpenAQ Live (R² = 0.88)</span>
+      </div>
+
+      <div class="station-select-wrapper">
+        <select id="stationSelect" aria-label="Select Urban Monitoring Station">
+          <option value="DEL-01">DEL-01: Anand Vihar ISBT (Delhi NCR)</option>
+        </select>
+      </div>
+
+      <button id="refreshBtn" class="btn-action" title="Refresh Live Sensor Telemetry & OpenAQ Ingestion">
+        <span aria-hidden="true">↻</span> Refresh Live
+      </button>
+    </div>
+  </header>
+
+  <!-- Luxury Executive Multi-Dashboard Tabs -->
+  <nav class="luxury-view-tabs" role="tablist" aria-label="Executive Navigation Suite">
+    <button class="view-tab-btn active" data-view="view-command-center" role="tab" aria-selected="true">
+      <span class="tab-icon">🌐</span> 1. Live Command Center
+    </button>
+    <button class="view-tab-btn" data-view="view-forecaster" role="tab" aria-selected="false">
+      <span class="tab-icon">📈</span> 2. Predictive AI & XAI
+    </button>
+    <button class="view-tab-btn" data-view="view-policy-lab" role="tab" aria-selected="false">
+      <span class="tab-icon">🎛️</span> 3. Municipal Policy Lab
+    </button>
+    <button class="view-tab-btn" data-view="view-clean-navigation" role="tab" aria-selected="false">
+      <span class="tab-icon">🚴</span> 4. Green Navigation & Health
+    </button>
+    <button class="view-tab-btn" data-view="view-governance-audit" role="tab" aria-selected="false">
+      <span class="tab-icon">📑</span> 5. Governance & Audit Log
+    </button>
+  </nav>
+
+  <!-- =========================================================================
+       DASHBOARD 1: LIVE PAN-INDIA COMMAND CENTER & SPATIAL GIS
+       ========================================================================= -->
+  <section id="view-command-center" class="app-view active" role="tabpanel">
+
+    <!-- Top KPI Bento Row -->
+    <div class="bento-grid" style="margin-bottom: 20px;">
+
+      <!-- KPI 1: Live Composite AQI -->
+      <div class="bento-card col-3">
+        <div class="card-header">
+          <span class="card-title"><span class="card-title-icon">📊</span> Composite AQI</span>
+          <span class="card-meta">Live EPA / CPCB Standard</span>
+        </div>
+        <div class="kpi-main-val" id="kpiAqiVal" style="color: var(--aqi-usg);">
+          118 <span class="kpi-unit">AQI</span>
+        </div>
+        <span class="kpi-badge" id="kpiAqiBadge" style="background: rgba(249, 115, 22, 0.2); color: var(--aqi-usg);">
+          Unhealthy for Sensitive Groups
+        </span>
+        <div class="kpi-footer">
+          <span>24h Trajectory: <strong id="kpiAqiTrend" style="color: #F87171;">↑ +14 pts</strong></span>
+          <span>Confidence: <strong>94.2%</strong></span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Dominant Pollutant -->
+      <div class="bento-card col-3">
+        <div class="card-header">
+          <span class="card-title"><span class="card-title-icon">🧪</span> Dominant Pollutant</span>
+          <span class="card-meta">Primary Source</span>
+        </div>
+        <div class="kpi-main-val" id="kpiDominantVal" style="color: var(--accent-cyan);">
+          42.5 <span class="kpi-unit">µg/m³</span>
+        </div>
+        <span class="kpi-badge" id="kpiDominantBadge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">
+          PM2.5 (Combustion Particulate)
+        </span>
+        <div class="kpi-footer">
+          <span>WHO 24h Threshold: <strong>15.0 µg/m³</strong></span>
+          <span>Exceedance: <strong id="kpiExceedance" style="color: #F87171;">2.8x Safe Limit</strong></span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Active Pollution Regime -->
+      <div class="bento-card col-3">
+        <div class="card-header">
+          <span class="card-title"><span class="card-title-icon">🧬</span> Pattern Regime</span>
+          <span class="card-meta">ML Clustered</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+          <div id="kpiRegimeIcon" style="font-size: 2.5rem;">🚗</div>
+          <div>
+            <div id="kpiRegimeName" style="font-size: 1.15rem; font-weight: 800; color: #F97316;">Traffic Surge</div>
+            <div id="kpiRegimeDesc" style="font-size: 0.74rem; color: var(--text-secondary); line-height: 1.3;">
+              Morning vehicular rush with elevated NO2 & fine particulates.
+            </div>
+          </div>
+        </div>
+        <div class="kpi-footer" style="margin-top: 20px;">
+          <span>Cluster Match: <strong>89.4%</strong></span>
+          <span style="color: var(--accent-cyan);">Regime Active</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Meteorology & Atmospheric Dispersion -->
+      <div class="bento-card col-3">
+        <div class="card-header">
+          <span class="card-title"><span class="card-title-icon">🌬️</span> Micro-Climate</span>
+          <span class="card-meta">Dispersion Vector</span>
+        </div>
+        <div class="meteo-stats-grid">
+          <div class="meteo-item">
+            <div class="meteo-label">Wind Speed</div>
+            <div class="meteo-val" id="kpiWindSpeed">1.4 m/s <span style="font-size: 0.75rem; color: #F87171;">(Calm)</span></div>
+          </div>
+          <div class="meteo-item">
+            <div class="meteo-label">Temperature</div>
+            <div class="meteo-val" id="kpiTemp">28.4 °C</div>
+          </div>
+          <div class="meteo-item">
+            <div class="meteo-label">Humidity</div>
+            <div class="meteo-val" id="kpiHumidity">68.0 %</div>
+          </div>
+          <div class="meteo-item">
+            <div class="meteo-label">Inversion Risk</div>
+            <div class="meteo-val" id="kpiInversion" style="color: #FBBF24;">Moderate</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Spatial GIS Map & High-Risk Alerts Row -->
+    <div class="bento-grid">
+
+      <!-- Spatial Map (Col 8) -->
+      <div class="bento-card col-8">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🗺️</span> Pan-India Sensor Network & Gaussian Plume Advection</span>
+            <span class="card-meta">42 Monitoring Stations Across India • Live Spatial Telemetry</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btnGpsLocate" class="chart-tab-btn" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.4); color: var(--accent-cyan); font-weight: 700;" title="Detect My Live GPS Location & Nearest Station">
+              📍 My GPS
+            </button>
+            <button id="btnAllIndia" class="chart-tab-btn" title="View All India Monitoring Grid">
+              🇮🇳 All India
+            </button>
+          </div>
+        </div>
+
+        <!-- GPS Live Location Feedback Banner -->
+        <div id="gpsStatusBanner" style="display: none; margin-bottom: 8px; font-size: 0.76rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text-primary);"></div>
+
+        <div id="map"></div>
+        <div id="plumeInfo" style="margin-top: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+          <span style="color: var(--accent-cyan);">●</span> Select any station across India to visualize Gaussian plume advection and receptor risk.
+        </div>
+      </div>
+
+      <!-- High-Risk Alerts & Summary (Col 4) -->
+      <div class="bento-card col-4">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🚨</span> High-Risk Alerts & Triggers</span>
+            <span class="card-meta">Automated Municipal Warnings</span>
+          </div>
+        </div>
+        <div id="alertsContainer" style="max-height: 380px; overflow-y: auto;">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       DASHBOARD 2: PREDICTIVE AI FORECASTER, PATTERN RADAR & EXPLAINABILITY (XAI)
+       ========================================================================= -->
+  <section id="view-forecaster" class="app-view" role="tabpanel">
+
+    <div class="bento-grid" style="margin-bottom: 20px;">
+
+      <!-- Full-Width Forecast Chart & Prediction Details (Col 12) -->
+      <div class="bento-card col-12">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">📈</span> Time-Series Forecast & 90% Uncertainty Confidence Envelopes</span>
+            <span class="card-meta">Multi-Horizon Quantile Gradient Boosting (p10 - p90 Pinball Loss Regressors)</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="chart-tab-btn active" id="btnHorizon24">24 Hours Ahead</button>
+            <button class="chart-tab-btn" id="btnHorizon48">48 Hours Ahead</button>
+          </div>
+        </div>
+
+        <!-- Pollutant Selector Tabs -->
+        <div class="chart-tabs">
+          <button class="chart-tab-btn active" data-pollutant="aqi">Composite AQI</button>
+          <button class="chart-tab-btn" data-pollutant="pm25">PM2.5</button>
+          <button class="chart-tab-btn" data-pollutant="pm10">PM10</button>
+          <button class="chart-tab-btn" data-pollutant="no2">NO2 (Traffic)</button>
+          <button class="chart-tab-btn" data-pollutant="so2">SO2 (Industry)</button>
+          <button class="chart-tab-btn" data-pollutant="o3">O3 (Ozone)</button>
+          <button class="chart-tab-btn" data-pollutant="co">CO</button>
+        </div>
+
+        <!-- Prediction Details Insights Strip -->
+        <div id="predictionDetailsStrip" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 18px; font-size: 0.78rem;">
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">PEAK POLLUTION WINDOW</div>
+            <div id="predPeakTime" style="font-weight: 800; color: #EF4444; font-family: var(--font-mono); font-size: 1.05rem; margin-top: 2px;">--:-- (-- AQI)</div>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">CLEANEST AIR WINDOW</div>
+            <div id="predCleanestTime" style="font-weight: 800; color: #10B981; font-family: var(--font-mono); font-size: 1.05rem; margin-top: 2px;">--:-- (-- AQI)</div>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">24H TRAJECTORY DELTA</div>
+            <div id="predTrendDelta" style="font-weight: 800; color: var(--accent-cyan); font-family: var(--font-mono); font-size: 1.05rem; margin-top: 2px;">-- pts</div>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">WHO EXCEEDANCE HOURS</div>
+            <div id="predExceedanceHours" style="font-weight: 800; color: #F59E0B; font-family: var(--font-mono); font-size: 1.05rem; margin-top: 2px;">-- hrs / 24h</div>
+          </div>
+        </div>
+
+        <div class="chart-container" style="height: 360px;">
+          <canvas id="forecastChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Pattern Radar & XAI Drivers Row -->
+    <div class="bento-grid">
+
+      <!-- 1. Pattern Intelligence Radar (Col 6) -->
+      <div class="bento-card col-6">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🎯</span> Pollution Regime Radar Footprint</span>
+            <span class="card-meta">4 Smog Archetypes Discovered via K-Means & PCA</span>
+          </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+          <canvas id="radarChart"></canvas>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.78rem; color: var(--text-secondary); text-align: center;">
+          Compares active sensory footprint against multi-year historical atmospheric regimes.
+        </div>
+      </div>
+
+      <!-- 2. Explainable AI Root Causes (Col 6) -->
+      <div class="bento-card col-6">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🔍</span> Physics-Informed Root-Cause Attribution (XAI)</span>
+            <span class="card-meta">Feature Importance & Atmospheric Driver Breakdown</span>
+          </div>
+        </div>
+
+        <p id="xaiSummaryText" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+          Loading explainability drivers...
+        </p>
+
+        <div id="driverBarsContainer">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       DASHBOARD 3: SDG 13 MUNICIPAL POLICY SIMULATION LAB
+       ========================================================================= -->
+  <section id="view-policy-lab" class="app-view" role="tabpanel">
+
+    <div class="bento-grid">
+
+      <!-- Policy Controls (Col 6) -->
+      <div class="bento-card col-6">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🎛️</span> "What-If" Policy Intervention Simulator</span>
+            <span class="card-meta">SDG 13 Municipal Climate Intervention Lab</span>
+          </div>
+          <span class="sdg-tag sdg-13">Sim Engine</span>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+          Adjust municipal intervention levers in real time to simulate emission reductions, avoided health emergencies, and carbon mitigation before enacting policies.
+        </p>
+
+        <!-- Slider 1: Traffic Reduction -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>🚗 Traffic Congestion Rerouting & Odd-Even Restriction</span>
+            <span class="slider-val-badge" id="trafficValLabel">0%</span>
+          </div>
+          <input type="range" class="sim-slider" id="sliderTraffic" min="0" max="50" step="5" value="0">
+        </div>
+
+        <!-- Slider 2: Industrial Emission Curb -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>🏭 Industrial Emission Capping & Boiler Curtailment</span>
+            <span class="slider-val-badge" id="indValLabel">0%</span>
+          </div>
+          <input type="range" class="sim-slider" id="sliderIndustrial" min="0" max="60" step="5" value="0">
+        </div>
+
+        <!-- Slider 3: Road Dust Misting -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>💦 High-Pressure Anti-Smog Gun & Road Misting</span>
+            <span class="slider-val-badge" id="mistValLabel">0%</span>
+          </div>
+          <input type="range" class="sim-slider" id="sliderMisting" min="0" max="100" step="10" value="0">
+        </div>
+      </div>
+
+      <!-- Policy Simulated Impact Cards (Col 6) -->
+      <div class="bento-card col-6">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">📊</span> Simulated Environmental & Public Health Impact</span>
+            <span class="card-meta">Live Re-calculation Against Baseline Telemetry</span>
+          </div>
+        </div>
+
+        <div class="sim-results-box" style="margin-top: 0; padding: 20px;">
+          <div class="sim-metric-row">
+            <span style="font-size: 0.9rem; color: var(--text-secondary);">Predicted Net AQI:</span>
+            <strong id="simAqiOutput" style="font-size: 1.25rem; font-family: var(--font-mono); color: var(--aqi-good);">118 → 118</strong>
+          </div>
+          <div class="sim-metric-row">
+            <span style="font-size: 0.9rem; color: var(--text-secondary);">Avoided ER Respiratory Visits:</span>
+            <strong id="simHealthOutput" style="font-size: 1.05rem; color: var(--accent-cyan);">+0 / 100k pop</strong>
+          </div>
+          <div class="sim-metric-row">
+            <span style="font-size: 0.9rem; color: var(--text-secondary);">CO₂ Direct Mitigation:</span>
+            <strong id="simCo2Output" style="font-size: 1.05rem; color: var(--accent-emerald);">0 kg / day</strong>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); margin-bottom: 6px;">
+            💡 Return-on-Intervention Advisory
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+            Coupling a <strong>30% traffic curb</strong> with <strong>50% anti-smog misting</strong> delivers maximum marginal particulate reduction while minimizing municipal economic disruption.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       DASHBOARD 4: SDG 3 CLEAN NAVIGATION & HEALTH ADVISORY MATRIX
+       ========================================================================= -->
+  <section id="view-clean-navigation" class="app-view" role="tabpanel">
+
+    <div class="bento-grid">
+
+      <!-- Route Planner & Safe Windows (Col 7) -->
+      <div class="bento-card col-7">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🚴</span> Clean-Air Route Navigation Planner</span>
+            <span class="card-meta">Lowest Inhalation Exposure Corridor Selection</span>
+          </div>
+          <span class="sdg-tag sdg-3">Good Health</span>
+        </div>
+
+        <!-- Safe Windows Bar -->
+        <div style="display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 250px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 14px 16px;">
+            <div style="font-size: 0.72rem; color: var(--aqi-good); font-weight: 700; text-transform: uppercase;">🌟 Recommended Outdoor Exercise Window</div>
+            <div id="cleanWindowTime" style="font-size: 1.1rem; font-weight: 800; margin: 4px 0;">3:00 PM – 5:30 PM</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">Optimal air quality for sports, jogging, and outdoor school recess.</div>
+          </div>
+
+          <div style="flex: 1; min-width: 250px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 14px 16px;">
+            <div style="font-size: 0.72rem; color: var(--aqi-unhealthy); font-weight: 700; text-transform: uppercase;">⚠️ Peak Smog Window (Stay Indoors)</div>
+            <div id="peakWindowTime" style="font-size: 1.1rem; font-weight: 800; margin: 4px 0;">7:30 AM – 10:00 AM</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">Heavy vehicular inversion peak; keep windows closed.</div>
+          </div>
+        </div>
+
+        <!-- Route Form -->
+        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>🧭</span> Compare Inhalation Exposure Across Urban Corridors
+          </div>
+          <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 220px;">
+              <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">ORIGIN STATION</label>
+              <select id="routeOriginSelect" style="width: 100%; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-medium); padding: 9px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-top: 4px;"></select>
+            </div>
+            <div style="flex: 1; min-width: 220px;">
+              <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">DESTINATION STATION</label>
+              <select id="routeDestSelect" style="width: 100%; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-medium); padding: 9px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-top: 4px;"></select>
+            </div>
+            <button id="calcRouteBtn" class="btn-action" style="margin-top: 20px; padding: 9px 18px; font-size: 0.82rem;">
+              <span>🧭</span> Calculate Clean Route
+            </button>
+          </div>
+          <div id="cleanRouteOutput" style="margin-top: 12px; font-size: 0.8rem; color: #CBD5E1;"></div>
+        </div>
+      </div>
+
+      <!-- Health Guidance Matrix (Col 5) -->
+      <div class="bento-card col-5">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🩺</span> Population Health Guidance</span>
+            <span class="card-meta">Vulnerable Demographic Protection Matrix</span>
+          </div>
+        </div>
+        <div class="health-grid" id="healthDemographicsGrid">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       DASHBOARD 5: GOVERNANCE, GRAP COMPLIANCE & AUDIT LOG
+       ========================================================================= -->
+  <section id="view-governance-audit" class="app-view" role="tabpanel">
+
+    <div class="bento-grid">
+
+      <!-- Governance & GRAP Diagnostic (Col 12) -->
+      <div class="bento-card col-12" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">📜</span> CPCB / CAQM Graded Response Action Plan (GRAP) Protocol</span>
+            <span class="card-meta">Standard Operating Procedure for Emergency Air Quality Episodes</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; font-size: 0.78rem;">
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 14px;">
+            <div style="color: #F59E0B; font-weight: 800;">STAGE I — POOR (AQI 201-300)</div>
+            <div style="margin-top: 6px; color: var(--text-secondary); line-height: 1.4;">Strict anti-dust misting on roads >40ft, ban on open biomass burning, mechanized sweeping.</div>
+          </div>
+          <div style="background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: var(--radius-md); padding: 14px;">
+            <div style="color: #F97316; font-weight: 800;">STAGE II — VERY POOR (AQI 301-400)</div>
+            <div style="margin-top: 6px; color: var(--text-secondary); line-height: 1.4;">Ban on diesel generator sets, enhanced parking fees to discourage private vehicles, synchronized traffic.</div>
+          </div>
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md); padding: 14px;">
+            <div style="color: #EF4444; font-weight: 800;">STAGE III — SEVERE (AQI 401-450)</div>
+            <div style="margin-top: 6px; color: var(--text-secondary); line-height: 1.4;">Ban on non-essential construction & demolition, restriction on BS-III petrol & BS-IV diesel cars.</div>
+          </div>
+          <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 14px;">
+            <div style="color: #A855F7; font-weight: 800;">STAGE IV — SEVERE+ (AQI >450)</div>
+            <div style="margin-top: 6px; color: var(--text-secondary); line-height: 1.4;">Entry ban on non-essential trucks into city, 50% work-from-home mandate, virtual school classes.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tamper-Evident SQLite Audit Trail (Col 12) -->
+      <div class="bento-card col-12">
+        <div class="card-header">
+          <div>
+            <span class="card-title"><span class="card-title-icon">🔒</span> Tamper-Evident SQLite Operational Audit Trail</span>
+            <span class="card-meta">Persistent Log of Forecast Generations, High-Risk Triggers & Policy Interventions</span>
+          </div>
+          <button class="chart-tab-btn" onclick="loadAuditLogs()">↻ Refresh Log</button>
+        </div>
+
+        <div style="overflow-x: auto; max-height: 380px;">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Station ID</th>
+                <th>Event Type</th>
+                <th>AQI Metric</th>
+                <th>Operational Metadata</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                  Loading audit logs...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+<!-- Floating AI Copilot Toggle Button -->
+<button id="chatToggleBtn" class="chat-toggle-btn" title="Open AirPulse AI Environmental Copilot">
+  <span style="font-size: 1.25rem;">🤖</span>
+  <span>AI Copilot</span>
+</button>
+
+<!-- Floating Chat Panel -->
+<div id="chatPanel" class="chat-panel" role="dialog" aria-label="AirPulse AI Copilot">
+  <div class="chat-header">
+    <div class="chat-header-title">
+      <span>🤖</span>
+      <div>
+        <div>AirPulse AI Copilot</div>
+        <div style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 600;">Environmental Intelligence Assistant</div>
+      </div>
+    </div>
+    <button id="chatCloseBtn" class="chat-close-btn" title="Minimize Chat">&times;</button>
+  </div>
+
+  <!-- Interactive Quick Prompt Chips -->
+  <div class="chat-prompts-bar">
+    <button class="chat-prompt-chip" data-prompt="What is the current air quality and health risk for this station?">📊 Current AQI</button>
+    <button class="chat-prompt-chip" data-prompt="Explain the primary root-cause drivers behind current PM2.5 levels.">🔍 Root Causes</button>
+    <button class="chat-prompt-chip" data-prompt="What are the best municipal interventions to reduce AQI by 25%?">🎛️ Policy Advice</button>
+    <button class="chat-prompt-chip" data-prompt="Which hours are safe for outdoor sports and jogging today?">🩺 Safe Windows</button>
+    <button class="chat-prompt-chip" data-prompt="How does the Quantile Gradient Boosting multi-horizon model work?">🧠 ML Model</button>
+  </div>
+
+  <!-- Messages History Stream -->
+  <div id="chatMessages" class="chat-messages">
+    <div class="chat-msg assistant">
+      <div class="chat-msg-bubble">
+        👋 <strong>Hello! I am your AirPulse AI Environmental Copilot.</strong><br/><br/>
+        I am grounded in real-time telemetry from <strong>42 CAAQMS stations across India</strong>, multi-horizon gradient boosting forecasts, and municipal policy models.<br/><br/>
+        Ask me anything about live sensor readings, smog regimes, health advisories, or municipal interventions!
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="chat-input-container">
+    <input type="text" id="chatInput" class="chat-input" placeholder="Ask about air quality, forecasts, policies..." aria-label="Chat input" />
+    <button id="chatSendBtn" class="chat-send-btn" title="Send Question">➤</button>
+  </div>
+</div>
+
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<!-- Application Scripts -->
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/map.js"></script>
+<script src="/static/js/simulator.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/chatbot.js"></script>
+
+</body>
+</html>
